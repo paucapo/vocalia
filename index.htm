@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="utf-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width,initial-scale=1">
+   <title>VOCÀLIA</title>
+
+   <style>
+      textarea {
+         width: 200px;
+         height: 150px;
+         display: inline-block;
+      }
+   </style>
+
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="samples"><textarea data-index="100">
+i	271	2062
+e	355	1883
+Ɛ	550	1745
+ɑ	685	1460
+Ə	449	1212
+ɔ	599	990
+o	453	810
+u	342	678
+</textarea></div>
+
+
+<script type="text/javascript">
+    let Chart = {
+        SAMPLES: 10,
+        $canvas: null,
+        colors: ['red', 'blue', 'yellow', 'green', 'purple', 'orange'],
+
+        init: function () {
+            Chart.$canvas = document.getElementById('canvas');
+
+            Chart.$canvas.width = 500;
+            Chart.$canvas.height = 400;
+
+            let $samples_container = document.getElementById('samples');
+            for (let i = 1; i <= Chart.SAMPLES; i++) {
+                let $sample = document.createElement('textarea');
+                $sample.addEventListener('input', Chart.load);
+                $sample.dataset.index = i.toString();
+                $sample.style.borderColor = Chart.colors[i % Chart.colors.length];
+                $samples_container.append($sample);
+            }
+
+            Chart.load();
+        },
+
+        load: function () {
+            let table = [];
+            let max_x = 0;
+            let min_x = 99999999999999999;
+            let max_y = 0;
+            let min_y = 99999999999999999;
+            document.querySelectorAll('#samples > textarea').forEach(($sample) => {
+                let data = $sample.value.split("\n");
+
+                data.forEach((line) => {
+                    line = line.toString().trim();
+                    if (line === '') {
+                        return;
+                    }
+                    line = line.split("\t");
+                    if (line.length !== 3) {
+                        return;
+                    }
+                    let vocal = line[0].toString();
+                    let y = parseFloat(line[1]);
+                    let x = parseFloat(line[2]);
+                    table[x] = table[x] || [];
+                    table[x][y] = {vocal, i: $sample.dataset.index, x, y};
+                    max_x = Math.max(max_x, x);
+                    min_x = Math.min(min_x, x);
+                    max_y = Math.max(max_y, y);
+                    min_y = Math.min(min_y, y);
+                })
+            })
+
+            min_x = Math.max(min_x - 100, 1);
+            min_y = Math.max(min_y - 50, 1);
+            max_x += 200;
+            max_y += 50;
+
+            Chart.reset(min_x, max_x, min_y, max_y);
+
+            Object.keys(table).forEach((x) => {
+                let row = table[x];
+                Object.keys(row).forEach((y) => {
+                    let item = row[y];
+                    let color = Chart.colors[item.i % Chart.colors.length];
+
+                    x = Chart.logarithmic(x, min_x, max_x);
+                    y = Chart.logarithmic(y, min_y, max_y);
+                    console.log(x, y);
+                    Chart.vocal(item.vocal, x, y, color);
+                })
+            })
+        },
+
+        logarithmic: function (value, min, max) {
+            let b = 100 / Math.log(max / min);
+            let a = -b * Math.log(min);
+
+            return a + b * Math.log(value);
+        },
+
+        reset: function (min_x, max_x, min_y, max_y) {
+            let ctx = Chart.$canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, Chart.$canvas.width, Chart.$canvas.height);
+
+            Chart.horizontal(0, 'black');
+            Chart.horizontal(Chart.$canvas.height, 'black');
+            Chart.vertical(0, 'black');
+            Chart.vertical(Chart.$canvas.width, 'black');
+
+
+            ctx.font = '9px sans';
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+
+            let interval = 20;
+            for (let i = interval; i <= 100 - interval; i += interval) {
+                let x = (100 - i) * Chart.$canvas.width / 100;
+                Chart.vertical(x);
+
+                let x_label = parseInt((((max_x - min_x) * i) + min_x) / 100); // TODO: fucking logarithmic scale
+                ctx.save();
+                ctx.textAlign = 'right';
+                ctx.translate(x - 2, 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText(x_label, 0, 0);
+                ctx.restore();
+
+                let y = i * Chart.$canvas.height / 100;
+                Chart.horizontal(y);
+
+                let y_label = parseInt((((max_y - min_y) * i) + min_y) / 100);
+
+                ctx.save();
+                ctx.textAlign = 'right';
+                ctx.translate(Chart.$canvas.width - 1, y - 2);
+                ctx.fillText(y_label, 0, 0);
+                ctx.restore();
+            }
+        },
+
+        vocal: function (vocal, x, y, color) {
+            let ctx = Chart.$canvas.getContext('2d');
+
+            x = (100 - x) * Chart.$canvas.width / 100;
+            y = y * Chart.$canvas.height / 100;
+
+            ctx.font = '20px sans';
+            ctx.fillStyle = color || 'black';
+            ctx.fillText(vocal, x, y);
+        },
+
+        horizontal: function (y, color) {
+            let ctx = Chart.$canvas.getContext('2d');
+            ctx.save();
+            ctx.strokeStyle = color || 'rgba(0,0,0,0.1)';
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(Chart.$canvas.width, y);
+            ctx.stroke();
+            ctx.restore();
+        },
+
+        vertical: function (x, color) {
+            let ctx = Chart.$canvas.getContext('2d');
+            ctx.save();
+            ctx.strokeStyle = color || 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, Chart.$canvas.height);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    Chart.init();
+</script>
+
+</body>
+</html>
+
