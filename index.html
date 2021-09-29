@@ -12,47 +12,71 @@
          height: 150px;
          display: inline-block;
       }
+
+      #chartjs {
+         max-width: 500px;
+         max-height: 400px;
+      }
    </style>
+
+   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
 
 </head>
 <body>
 
-<canvas id="canvas"></canvas>
+<!--<canvas id="canvas"></canvas>-->
+<canvas id="chartjs"></canvas>
+<a href="#" id="save" download="vocalia.png">Save</a>
 
-<div id="samples"><textarea data-index="100">
-i	271	2062
-e	355	1883
-Ɛ	550	1745
-ɑ	685	1460
-Ə	449	1212
-ɔ	599	990
-o	453	810
-u	342	678
-</textarea></div>
+
+<div id="samples"></div>
 
 
 <script type="text/javascript">
-    let Chart = {
+    let Vocalia = {
         SAMPLES: 10,
-        $canvas: null,
-        colors: ['red', 'blue', 'yellow', 'green', 'purple', 'orange'],
+        $chartjs: null,
+        colors: [
+            'rgba(255, 99, 132, 0.7)',
+            'rgba(255, 159, 64, 0.7)',
+            'rgba(255, 205, 86, 0.7)',
+            'rgba(75, 192, 192, 0.7)',
+            'rgba(54, 162, 235, 0.7)',
+            'rgba(153, 102, 255, 0.7)',
+            'rgba(201, 203, 207, 0.7)'
+        ],
+        demo: [
+            'i\t271\t2062\n' +
+            'e\t355\t1883\n' +
+            'Ɛ\t550\t1745\n' +
+            'ɑ\t685\t1460\n' +
+            'Ə\t449\t1212\n' +
+            'ɔ\t599\t990\n' +
+            'o\t453\t810\n' +
+            'u\t342\t678'
+        ],
+        datasets: [],
 
         init: function () {
-            Chart.$canvas = document.getElementById('canvas');
 
-            Chart.$canvas.width = 500;
-            Chart.$canvas.height = 400;
+            document.getElementById('save').addEventListener('click', (e) => {
+                e.preventDefault();
+                Vocalia.save();
+            })
 
             let $samples_container = document.getElementById('samples');
-            for (let i = 1; i <= Chart.SAMPLES; i++) {
+            for (let i = 0; i < Vocalia.SAMPLES; i++) {
                 let $sample = document.createElement('textarea');
-                $sample.addEventListener('input', Chart.load);
+                $sample.addEventListener('input', Vocalia.load);
                 $sample.dataset.index = i.toString();
-                $sample.style.borderColor = Chart.colors[i % Chart.colors.length];
+                $sample.value = Vocalia.demo[i] || '';
+                $sample.style.borderColor = Vocalia.colors[i % Vocalia.colors.length];
                 $samples_container.append($sample);
             }
 
-            Chart.load();
+            Vocalia.load();
         },
 
         load: function () {
@@ -62,6 +86,7 @@ u	342	678
             let max_y = 0;
             let min_y = 99999999999999999;
             document.querySelectorAll('#samples > textarea').forEach(($sample) => {
+                let i = $sample.dataset.index;
                 let data = $sample.value.split("\n");
 
                 data.forEach((line) => {
@@ -76,8 +101,10 @@ u	342	678
                     let vocal = line[0].toString();
                     let y = parseFloat(line[1]);
                     let x = parseFloat(line[2]);
-                    table[x] = table[x] || [];
-                    table[x][y] = {vocal, i: $sample.dataset.index, x, y};
+
+                    table[i] = table[i] || [];
+                    table[i].push({x, y, label: vocal})
+
                     max_x = Math.max(max_x, x);
                     min_x = Math.min(min_x, x);
                     max_y = Math.max(max_y, y);
@@ -85,109 +112,122 @@ u	342	678
                 })
             })
 
-            min_x = Math.max(min_x - 100, 1);
-            min_y = Math.max(min_y - 50, 1);
-            max_x += 200;
-            max_y += 50;
+            Vocalia.min_x = Math.max(min_x - 50, 1);
+            Vocalia.min_y = Math.max(min_y - 50, 1);
+            Vocalia.max_x = max_x + 100;
+            Vocalia.max_y = max_y + 100;
 
-            Chart.reset(min_x, max_x, min_y, max_y);
+            Vocalia.datasets = [];
+            Object.keys(table).forEach((index) => {
+                Vocalia.datasets.push({
+                    backgroundColor: Vocalia.colors[index % Vocalia.colors.length],
+                    // borderColor: Vocalia.colors[index % Vocalia.colors.length],
+                    data: table[index],
+                });
+            });
 
-            Object.keys(table).forEach((x) => {
-                let row = table[x];
-                Object.keys(row).forEach((y) => {
-                    let item = row[y];
-                    let color = Chart.colors[item.i % Chart.colors.length];
-
-                    x = Chart.logarithmic(x, min_x, max_x);
-                    y = Chart.logarithmic(y, min_y, max_y);
-                    console.log(x, y);
-                    Chart.vocal(item.vocal, x, y, color);
-                })
-            })
+            Vocalia.print();
         },
 
-        logarithmic: function (value, min, max) {
-            let b = 100 / Math.log(max / min);
-            let a = -b * Math.log(min);
-
-            return a + b * Math.log(value);
-        },
-
-        reset: function (min_x, max_x, min_y, max_y) {
-            let ctx = Chart.$canvas.getContext('2d');
-
-            ctx.clearRect(0, 0, Chart.$canvas.width, Chart.$canvas.height);
-
-            Chart.horizontal(0, 'black');
-            Chart.horizontal(Chart.$canvas.height, 'black');
-            Chart.vertical(0, 'black');
-            Chart.vertical(Chart.$canvas.width, 'black');
-
-
-            ctx.font = '9px sans';
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-
-            let interval = 20;
-            for (let i = interval; i <= 100 - interval; i += interval) {
-                let x = (100 - i) * Chart.$canvas.width / 100;
-                Chart.vertical(x);
-
-                let x_label = parseInt((((max_x - min_x) * i) + min_x) / 100); // TODO: fucking logarithmic scale
-                ctx.save();
-                ctx.textAlign = 'right';
-                ctx.translate(x - 2, 2);
-                ctx.rotate(-Math.PI / 2);
-                ctx.fillText(x_label, 0, 0);
-                ctx.restore();
-
-                let y = i * Chart.$canvas.height / 100;
-                Chart.horizontal(y);
-
-                let y_label = parseInt((((max_y - min_y) * i) + min_y) / 100);
-
-                ctx.save();
-                ctx.textAlign = 'right';
-                ctx.translate(Chart.$canvas.width - 1, y - 2);
-                ctx.fillText(y_label, 0, 0);
-                ctx.restore();
+        print: function () {
+            const config = {
+                type: 'scatter',
+                data: {
+                    datasets: Vocalia.datasets
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    // responsive: true,
+                    // pointRadius: 0,
+                    // pointHoverRadius: 0,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        tooltips: {
+                            enabled: false,
+                            callbacks: {
+                                footer: function () {
+                                    return '';
+                                },
+                            }
+                        },
+                        legend: {
+                            display: false,
+                        },
+                        datalabels: {
+                            display: true,
+                            formatter: function (value, ctx) {
+                                return value.label;
+                            },
+                            backgroundColor: function (context) {
+                                return context.dataset.backgroundColor;
+                            },
+                            font: {
+                                weight: 'bold'
+                            },
+                            color: 'white',
+                            padding: 6,
+                            borderRadius: 4,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            type: 'logarithmic',
+                            reverse: true,
+                            position: 'top',
+                            min: Vocalia.min_x,
+                            max: Vocalia.max_x,
+                            ticks: {
+                                callback: (value, index, arr) => {
+                                    return value;
+                                },
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        },
+                        y: {
+                            display: true,
+                            type: 'logarithmic',
+                            reverse: true,
+                            position: 'right',
+                            min: Vocalia.min_y,
+                            max: Vocalia.max_y,
+                            ticks: {
+                                callback: (value, index, arr) => {
+                                    return value;
+                                },
+                            }
+                        }
+                    }
+                },
+            };
+            if (Vocalia.$chartjs) {
+                Vocalia.$chartjs.destroy();
             }
+            Vocalia.$chartjs = new Chart(
+                document.getElementById('chartjs'),
+                config
+            );
         },
 
-        vocal: function (vocal, x, y, color) {
-            let ctx = Chart.$canvas.getContext('2d');
-
-            x = (100 - x) * Chart.$canvas.width / 100;
-            y = y * Chart.$canvas.height / 100;
-
-            ctx.font = '20px sans';
-            ctx.fillStyle = color || 'black';
-            ctx.fillText(vocal, x, y);
-        },
-
-        horizontal: function (y, color) {
-            let ctx = Chart.$canvas.getContext('2d');
+        save: function () {
+            let $canvas = document.getElementById('chartjs');
+            let ctx = $canvas.getContext('2d');
             ctx.save();
-            ctx.strokeStyle = color || 'rgba(0,0,0,0.1)';
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(Chart.$canvas.width, y);
-            ctx.stroke();
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, $canvas.width, $canvas.height);
             ctx.restore();
-        },
-
-        vertical: function (x, color) {
-            let ctx = Chart.$canvas.getContext('2d');
-            ctx.save();
-            ctx.strokeStyle = color || 'rgba(0,0,0,0.2)';
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, Chart.$canvas.height);
-            ctx.stroke();
-            ctx.restore();
+            window.location.href = $canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
         }
     }
 
-    Chart.init();
+    window.onload = function () {
+        Vocalia.init();
+    }
+
 </script>
 
 </body>
