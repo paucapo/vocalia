@@ -7,15 +7,30 @@
    <title>VOCÀLIA</title>
 
    <style>
+      body {
+         font-family: Arial, sans-serif;
+      }
+
       textarea {
          width: 200px;
          height: 150px;
          display: inline-block;
+         border-width: 3px;
+         margin: 5px;
       }
 
       #chartjs {
          max-width: 500px;
          max-height: 400px;
+      }
+
+      #phonetics > span {
+         cursor: copy;
+         font-size: 150%;
+      }
+
+      .muted {
+         color: rgba(0, 0, 0, 0.5);
       }
    </style>
 
@@ -26,17 +41,29 @@
 </head>
 <body>
 
-<!--<canvas id="canvas"></canvas>-->
+<h1>Vocàlia</h1>
+
+<a href="#" id="save" download="vocalia.png">Save image</a>
 <canvas id="chartjs"></canvas>
-<a href="#" id="save" download="vocalia.png">Save</a>
 
 
+<a href="#" id="add">Add sample</a>
 <div id="samples"></div>
 
+<p class="muted">
+   Valid column separator: tab (\t), comma (,), semicolon (;) or vertical line (|).<br>
+   Can be directly pasted from Excel or LibreOffice Calc.
+</p>
+
+<p id="phonetics" class="muted">
+   Phonetic symbols (click to copy to the clipboard):<br>
+   <span>i</span> <span>y</span> <span>ɨ</span> <span>ʉ</span> <span>ɯ</span> <span>u</span> <span>ɪ</span> <span>ʏ</span> <span>ɪ̈</span> <span>ʊ̈</span>
+   <span>ʊ</span> <span>e</span> <span>ø</span> <span>ɘ</span> <span>ɵ</span> <span>ɤ</span> <span>o</span> <span>ə</span> <span>ɛ</span> <span>œ</span>
+   <span>ɜ</span> <span>ɞ</span> <span>ʌ</span> <span>ɔ</span> <span>æ</span> <span>ɐ</span> <span>a</span> <span>ɶ</span> <span>ɑ</span> <span>ɒ</span>
+</p>
 
 <script type="text/javascript">
     let Vocalia = {
-        SAMPLES: 10,
         $chartjs: null,
         colors: [
             'rgba(255, 99, 132, 0.7)',
@@ -49,9 +76,9 @@
         ],
         demo: [
             'i\t271\t2062\n' +
-            'e\t355\t1883\n' +
-            'Ɛ\t550\t1745\n' +
-            'ɑ\t685\t1460\n' +
+            'e,355,1883\n' +
+            'Ɛ;550;1745\n' +
+            'ɑ|685|1460\n' +
             'Ə\t449\t1212\n' +
             'ɔ\t599\t990\n' +
             'o\t453\t810\n' +
@@ -64,19 +91,36 @@
             document.getElementById('save').addEventListener('click', (e) => {
                 e.preventDefault();
                 Vocalia.save();
+            });
+            document.getElementById('add').addEventListener('click', (e) => {
+                e.preventDefault();
+                Vocalia.add();
+            });
+
+            document.querySelectorAll('#phonetics > span').forEach(($symbol) => {
+                $symbol.addEventListener('click', () => {
+                    navigator.clipboard.writeText($symbol.innerHTML).then(function () {
+                        console.log('Async: Copying to clipboard was successful!');
+                    }, function (err) {
+                        console.error('Async: Could not copy text: ', err);
+                    });
+                });
             })
 
-            let $samples_container = document.getElementById('samples');
-            for (let i = 0; i < Vocalia.SAMPLES; i++) {
-                let $sample = document.createElement('textarea');
-                $sample.addEventListener('input', Vocalia.load);
-                $sample.dataset.index = i.toString();
-                $sample.value = Vocalia.demo[i] || '';
-                $sample.style.borderColor = Vocalia.colors[i % Vocalia.colors.length];
-                $samples_container.append($sample);
-            }
-
+            Vocalia.add();
             Vocalia.load();
+        },
+
+        add: function () {
+            let $samples_container = document.getElementById('samples');
+            let i = $samples_container.children.length;
+
+            let $sample = document.createElement('textarea');
+            $sample.addEventListener('input', Vocalia.load);
+            $sample.dataset.index = i.toString();
+            $sample.value = Vocalia.demo[i] || '';
+            $sample.style.borderColor = Vocalia.colors[i % Vocalia.colors.length];
+            $samples_container.append($sample);
         },
 
         load: function () {
@@ -94,13 +138,13 @@
                     if (line === '') {
                         return;
                     }
-                    line = line.split("\t");
+                    line = line.split("\t").join(',').split('|').join(',').split(';').join(',').split(',');
                     if (line.length !== 3) {
                         return;
                     }
-                    let vocal = line[0].toString();
-                    let y = parseFloat(line[1]);
-                    let x = parseFloat(line[2]);
+                    let vocal = line[0].toString().trim();
+                    let y = parseFloat(line[1].trim());
+                    let x = parseFloat(line[2].trim());
 
                     table[i] = table[i] || [];
                     table[i].push({x, y, label: vocal})
