@@ -1,0 +1,64 @@
+body {
+   font-family: Arial, sans-serif;
+}
+
+#content {
+   max-width: 1024px;
+   margin: 0 auto;
+}
+
+#menu {
+   padding: 20px;
+   margin: 20px 0;
+}
+
+a {
+   color: cornflowerblue;
+   text-decoration: none;
+}
+
+/*textarea {
+   width: 200px;
+   height: 150px;
+   display: inline-block;
+   border-width: 3px;
+   margin: 5px;
+}*/
+
+#chartjs {
+   max-width: 500px;
+   max-height: 400px;
+}
+
+#samples div {
+   --color: rgba(0, 0, 0, 0.5);
+   border: 1px solid rgba(0, 0, 0, 0.2);
+   padding: 20px;
+   margin: 20px 0;
+}
+
+#samples table {
+   border: 0;
+}
+
+#samples td {
+   border: 0;
+}
+
+#samples input {
+   border: 1px solid var(--color);
+   display: block;
+}
+
+#samples input:focus {
+   outline: 0;
+}
+
+#phonetics > span {
+   cursor: pointer;
+   font-size: 150%;
+}
+
+.muted {
+   color: rgba(0, 0, 0, 0.5);
+}

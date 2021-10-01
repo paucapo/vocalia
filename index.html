@@ -4,282 +4,57 @@
    <meta charset="utf-8">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
    <meta name="viewport" content="width=device-width,initial-scale=1">
-   <title>VOCÀLIA</title>
+   <title>Vocàlia</title>
 
-   <style>
-      body {
-         font-family: Arial, sans-serif;
-      }
-
-      textarea {
-         width: 200px;
-         height: 150px;
-         display: inline-block;
-         border-width: 3px;
-         margin: 5px;
-      }
-
-      #chartjs {
-         max-width: 500px;
-         max-height: 400px;
-      }
-
-      #phonetics > span {
-         cursor: copy;
-         font-size: 150%;
-      }
-
-      .muted {
-         color: rgba(0, 0, 0, 0.5);
-      }
-   </style>
+   <link rel="stylesheet" href="style.css">
 
    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-
+   <script src="script.js"></script>
 
 </head>
 <body>
 
-<h1>Vocàlia</h1>
+<div id="content">
+   <h1>Vocàlia</h1>
 
-<a href="#" id="save" download="vocalia.png">Save image</a>
-<canvas id="chartjs"></canvas>
+   <canvas id="chartjs"></canvas>
 
 
-<a href="#" id="add">Add sample</a>
-<div id="samples"></div>
+   <div id="menu">
+      <button id="save" download="vocalia.png">Save image</button>
+      <button data-add_sample>Add</button>
+      <button data-load_demo>Load demo</button>
+   </div>
 
-<p class="muted">
-   Valid column separator: tab (\t), comma (,), semicolon (;) or vertical line (|).<br>
-   Can be directly pasted from Excel or LibreOffice Calc.
-</p>
+   <div id="samples"></div>
 
-<p id="phonetics" class="muted">
-   Phonetic symbols (click to copy to the clipboard):<br>
-   <span>i</span> <span>y</span> <span>ɨ</span> <span>ʉ</span> <span>ɯ</span> <span>u</span> <span>ɪ</span> <span>ʏ</span> <span>ɪ̈</span> <span>ʊ̈</span>
-   <span>ʊ</span> <span>e</span> <span>ø</span> <span>ɘ</span> <span>ɵ</span> <span>ɤ</span> <span>o</span> <span>ə</span> <span>ɛ</span> <span>œ</span>
-   <span>ɜ</span> <span>ɞ</span> <span>ʌ</span> <span>ɔ</span> <span>æ</span> <span>ɐ</span> <span>a</span> <span>ɶ</span> <span>ɑ</span> <span>ɒ</span>
-</p>
+   <p id="phonetics" class="muted">
+      Phonetic symbols (click to copy to the clipboard):<br>
+      <span>i</span> <span>y</span> <span>ɨ</span> <span>ʉ</span> <span>ɯ</span> <span>u</span> <span>ɪ</span> <span>ʏ</span> <span>ɪ̈</span> <span>ʊ̈</span>
+      <span>ʊ</span> <span>e</span> <span>ø</span> <span>ɘ</span> <span>ɵ</span> <span>ɤ</span> <span>o</span> <span>ə</span> <span>ɛ</span> <span>œ</span>
+      <span>ɜ</span> <span>ɞ</span> <span>ʌ</span> <span>ɔ</span> <span>æ</span> <span>ɐ</span> <span>a</span> <span>ɶ</span> <span>ɑ</span> <span>ɒ</span>
+   </p>
 
-<script type="text/javascript">
-    let Vocalia = {
-        $chartjs: null,
-        colors: [
-            'rgba(255, 99, 132, 0.7)',
-            'rgba(255, 159, 64, 0.7)',
-            'rgba(255, 205, 86, 0.7)',
-            'rgba(75, 192, 192, 0.7)',
-            'rgba(54, 162, 235, 0.7)',
-            'rgba(153, 102, 255, 0.7)',
-            'rgba(201, 203, 207, 0.7)'
-        ],
-        demo: [
-            'i\t271\t2062\n' +
-            'e,355,1883\n' +
-            'Ɛ;550;1745\n' +
-            'ɑ|685|1460\n' +
-            'Ə\t449\t1212\n' +
-            'ɔ\t599\t990\n' +
-            'o\t453\t810\n' +
-            'u\t342\t678'
-        ],
-        datasets: [],
+</div>
 
-        init: function () {
+<script type="text/template" id="sample-template">
+   <div>
+      <button data-remove_sample>Remove</button>
+      <table data-color="{color}"></table>
+      <button data-add_row>Add row</button>
+   </div>
+</script>
 
-            document.getElementById('save').addEventListener('click', (e) => {
-                e.preventDefault();
-                Vocalia.save();
-            });
-            document.getElementById('add').addEventListener('click', (e) => {
-                e.preventDefault();
-                Vocalia.add();
-            });
-
-            document.querySelectorAll('#phonetics > span').forEach(($symbol) => {
-                $symbol.addEventListener('click', () => {
-                    navigator.clipboard.writeText($symbol.innerHTML).then(function () {
-                        console.log('Async: Copying to clipboard was successful!');
-                    }, function (err) {
-                        console.error('Async: Could not copy text: ', err);
-                    });
-                });
-            })
-
-            Vocalia.add();
-            Vocalia.load();
-        },
-
-        add: function () {
-            let $samples_container = document.getElementById('samples');
-            let i = $samples_container.children.length;
-
-            let $sample = document.createElement('textarea');
-            $sample.addEventListener('input', Vocalia.load);
-            $sample.dataset.index = i.toString();
-            $sample.value = Vocalia.demo[i] || '';
-            $sample.style.borderColor = Vocalia.colors[i % Vocalia.colors.length];
-            $samples_container.append($sample);
-        },
-
-        load: function () {
-            let table = [];
-            let max_x = 0;
-            let min_x = 99999999999999999;
-            let max_y = 0;
-            let min_y = 99999999999999999;
-            document.querySelectorAll('#samples > textarea').forEach(($sample) => {
-                let i = $sample.dataset.index;
-                let data = $sample.value.split("\n");
-
-                data.forEach((line) => {
-                    line = line.toString().trim();
-                    if (line === '') {
-                        return;
-                    }
-                    line = line.split("\t").join(',').split('|').join(',').split(';').join(',').split(',');
-                    if (line.length !== 3) {
-                        return;
-                    }
-                    let vocal = line[0].toString().trim();
-                    let y = parseFloat(line[1].trim());
-                    let x = parseFloat(line[2].trim());
-
-                    table[i] = table[i] || [];
-                    table[i].push({x, y, label: vocal})
-
-                    max_x = Math.max(max_x, x);
-                    min_x = Math.min(min_x, x);
-                    max_y = Math.max(max_y, y);
-                    min_y = Math.min(min_y, y);
-                })
-            })
-
-            Vocalia.min_x = Math.max(min_x - 50, 1);
-            Vocalia.min_y = Math.max(min_y - 50, 1);
-            Vocalia.max_x = max_x + 100;
-            Vocalia.max_y = max_y + 100;
-
-            Vocalia.datasets = [];
-            Object.keys(table).forEach((index) => {
-                Vocalia.datasets.push({
-                    backgroundColor: Vocalia.colors[index % Vocalia.colors.length],
-                    // borderColor: Vocalia.colors[index % Vocalia.colors.length],
-                    data: table[index],
-                });
-            });
-
-            Vocalia.print();
-        },
-
-        print: function () {
-            const config = {
-                type: 'scatter',
-                data: {
-                    datasets: Vocalia.datasets
-                },
-                plugins: [ChartDataLabels],
-                options: {
-                    // responsive: true,
-                    // pointRadius: 0,
-                    // pointHoverRadius: 0,
-                    animation: {
-                        duration: 0
-                    },
-                    plugins: {
-                        tooltips: {
-                            enabled: false,
-                            callbacks: {
-                                footer: function () {
-                                    return '';
-                                },
-                            }
-                        },
-                        legend: {
-                            display: false,
-                        },
-                        datalabels: {
-                            display: true,
-                            formatter: function (value, ctx) {
-                                return value.label;
-                            },
-                            backgroundColor: function (context) {
-                                return context.dataset.backgroundColor;
-                            },
-                            font: {
-                                weight: 'bold'
-                            },
-                            color: 'white',
-                            padding: 6,
-                            borderRadius: 4,
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'F2',
-                            },
-                            display: true,
-                            type: 'logarithmic',
-                            reverse: true,
-                            position: 'top',
-                            min: Vocalia.min_x,
-                            max: Vocalia.max_x,
-                            ticks: {
-                                callback: (value, index, arr) => {
-                                    return value;
-                                },
-                                maxRotation: 45,
-                                minRotation: 45
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'F1',
-                            },
-                            display: true,
-                            type: 'logarithmic',
-                            reverse: true,
-                            position: 'right',
-                            min: Vocalia.min_y,
-                            max: Vocalia.max_y,
-                            ticks: {
-                                callback: (value, index, arr) => {
-                                    return value;
-                                },
-                            }
-                        }
-                    }
-                },
-            };
-            if (Vocalia.$chartjs) {
-                Vocalia.$chartjs.destroy();
-            }
-            Vocalia.$chartjs = new Chart(
-                document.getElementById('chartjs'),
-                config
-            );
-        },
-
-        save: function () {
-            let $canvas = document.getElementById('chartjs');
-            let ctx = $canvas.getContext('2d');
-            ctx.save();
-            ctx.globalCompositeOperation = 'destination-over';
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, $canvas.width, $canvas.height);
-            ctx.restore();
-            window.location.href = $canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
-        }
-    }
-
-    window.onload = function () {
-        Vocalia.init();
-    }
-
+<script type="text/template" id="row-template">
+   <tr>
+      <td><input placeholder="Vowel" value="{vowel}"/></td>
+      <td><input placeholder="F1" value="{f1}"/></td>
+      <td><input placeholder="F2" value="{f2}"/></td>
+      <td>
+         <button data-remove_row>x</button>
+      </td>
+   </tr>
 </script>
 
 </body>
