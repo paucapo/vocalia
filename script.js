@@ -35,7 +35,7 @@ let Vocalia = {
 
     init: function () {
 
-        document.getElementById('save').addEventListener('click', (e) => {
+        document.querySelector('[data-save]').addEventListener('click', (e) => {
             Vocalia.save();
         });
         document.querySelector('[data-add_sample]').addEventListener('click', (e) => {
@@ -335,13 +335,19 @@ let Vocalia = {
 
     save: function () {
         let $canvas = document.getElementById('chartjs');
+
         let ctx = $canvas.getContext('2d');
         ctx.save();
         ctx.globalCompositeOperation = 'destination-over';
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, $canvas.width, $canvas.height);
         ctx.restore();
-        document.getElementById('save').href = $canvas.toDataURL('image/png');
+
+        let $save = document.createElement('a');
+        $save.setAttribute('download', 'vocalia.png');
+        $save.href = $canvas.toDataURL('image/png');
+        $save.click();
+        $save.remove();
     },
 
     render: function (template, item, parent) {
