@@ -161,7 +161,6 @@ let Vocalia = {
                     y: parseFloat(row[1]),
                     x: parseFloat(row[2]),
                 };
-                console.log(row, point);
                 if (isNaN(point.x) || isNaN(point.y) || point.label === '') {
                     return;
                 }
@@ -285,12 +284,16 @@ let Vocalia = {
                             display: false
                         },
                         ticks: {
-                            display: false,
+                            display: true,
                             callback: (value, index, arr) => {
-                                return value;
+                                if (index === 0 || index === arr.length - 1) {
+                                    return value;
+                                } else {
+                                    return '';
+                                }
                             },
-                            maxRotation: 45,
-                            minRotation: 45
+                            // maxRotation: 45,
+                            // minRotation: 45
                         }
                     },
                     y: {
@@ -308,9 +311,13 @@ let Vocalia = {
                             display: false
                         },
                         ticks: {
-                            display: false,
+                            display: true,
                             callback: (value, index, arr) => {
-                                return value;
+                                if (index === 0 || index === arr.length - 1) {
+                                    return value;
+                                } else {
+                                    return '';
+                                }
                             },
                         }
                     }
