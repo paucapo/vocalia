@@ -6,11 +6,11 @@
    <meta name="viewport" content="width=device-width,initial-scale=1">
    <title>Vocàlia</title>
 
-   <link rel="stylesheet" href="style.css?v=0.2">
+   <link rel="stylesheet" href="style.css?v=0.3">
 
    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-   <script src="script.js?v=0.2"></script>
+   <script src="script.js?v=0.3"></script>
 
 </head>
 <body>
@@ -25,6 +25,13 @@
       <button data-save>Save image</button>
       <button data-add_sample>Add</button>
       <button data-load_demo>Load demo</button>
+      <button data-toggle_excel>Import from Excel</button>
+   </div>
+
+   <div id="excel" class="box muted hidden">
+      Copy and paste from Excel:<br>
+      <textarea></textarea><br>
+      <button data-import_excel>Import</button>
    </div>
 
    <div id="samples"></div>

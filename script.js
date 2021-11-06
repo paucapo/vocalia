@@ -38,6 +38,7 @@ let Vocalia = {
         document.querySelector('[data-save]').addEventListener('click', (e) => {
             Vocalia.save();
         });
+
         document.querySelector('[data-add_sample]').addEventListener('click', (e) => {
             e.preventDefault();
             Vocalia.add(true);
@@ -46,6 +47,17 @@ let Vocalia = {
         document.querySelector('[data-load_demo]').addEventListener('click', (e) => {
             e.preventDefault();
             Vocalia.load_demo();
+        });
+
+        document.querySelector('[data-toggle_excel]').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelector('#excel').classList.toggle('hidden');
+            document.querySelector('#excel textarea').value = '';
+        });
+
+        document.querySelector('[data-import_excel]').addEventListener('click', (e) => {
+            e.preventDefault();
+            Vocalia.import_excel();
         });
 
         document.querySelectorAll('#phonetics > span').forEach(($symbol) => {
@@ -71,6 +83,35 @@ let Vocalia = {
         Vocalia.add_row($demo, {vowel: 'ɔ', f1: 599, f2: 990});
         Vocalia.add_row($demo, {vowel: 'o', f1: 453, f2: 810});
         Vocalia.add_row($demo, {vowel: 'u', f1: 342, f2: 678});
+    },
+
+    import_excel: function () {
+        let excel = document.querySelector('#excel textarea').value;
+        let lines = excel.split("\n");
+        let data = [];
+        lines.forEach((line) => {
+            line = line.toString().trim();
+            if (line === '') {
+                return;
+            }
+            line = line.split("\t").join(',').split('|').join(',').split(';').join(',').split(',');
+            if (line.length !== 3) {
+                return;
+            }
+
+            let vowel = line[0].toString().trim();
+            let f1 = parseFloat(line[1].trim());
+            let f2 = parseFloat(line[2].trim());
+            data.push({vowel: vowel, f1: f1, f2: f2})
+        })
+
+        if (data.length) {
+            let $data = Vocalia.add(false);
+            data.forEach(d => {
+                Vocalia.add_row($data, d);
+            });
+            document.querySelector('#excel').classList.toggle('hidden');
+        }
     },
 
     add: function (add_row) {
@@ -148,7 +189,11 @@ let Vocalia = {
 
         document.querySelectorAll('#samples table').forEach(($table) => {
             let sample = {
-                backgroundColor: $table.dataset.color,
+                backgroundColor: 'transparent',
+                borderColor: 'transparent',
+                datalabels: {
+                    color: $table.dataset.color
+                },
                 data: [],
             };
             $table.querySelectorAll('tr').forEach(($line) => {
@@ -203,10 +248,10 @@ let Vocalia = {
         //     })
         // })
 
-        Vocalia.min_x = Math.max(min_x - 50, 1);
-        Vocalia.min_y = Math.max(min_y - 50, 1);
-        Vocalia.max_x = max_x + 100;
-        Vocalia.max_y = max_y + 100;
+        Vocalia.min_x = Vocalia.min(min_x);
+        Vocalia.min_y = Vocalia.min(min_y);
+        Vocalia.max_x = Vocalia.max(max_x);
+        Vocalia.max_y = Vocalia.max(max_y);
 
         // Vocalia.datasets = [];
         // Object.keys(table).forEach((index) => {
@@ -218,6 +263,16 @@ let Vocalia = {
         // });
 
         Vocalia.print();
+    },
+
+    min: function (v) {
+        // min value in intervals of 100
+        return Math.floor(Math.max(v - 50, 1) / 100) * 100;
+    },
+
+    max: function (v) {
+        // max value in intervals of 100
+        return Math.ceil((v + 50) / 100) * 100;
     },
 
     print: function () {
@@ -241,7 +296,7 @@ let Vocalia = {
                         // borderDash: [5, 5],
                         // borderDashOffset: 2,
                     },
-                    tooltips: {
+                    tooltip: {
                         enabled: false,
                         callbacks: {
                             footer: function () {
@@ -257,15 +312,16 @@ let Vocalia = {
                         formatter: function (value, ctx) {
                             return value.label;
                         },
-                        backgroundColor: function (context) {
-                            return context.dataset.backgroundColor;
-                        },
+                        // backgroundColor: function (context) {
+                        //     return 'transparent';
+                        // },
                         font: {
-                            weight: 'bold'
+                            weight: 'bold',
+                            size: 18
                         },
-                        color: 'white',
-                        padding: 6,
-                        borderRadius: 4,
+                        // color: 'white',
+                        // padding: 6,
+                        // borderRadius: 0,
                     }
                 },
                 scales: {
@@ -275,26 +331,26 @@ let Vocalia = {
                             text: 'F2',
                         },
                         display: true,
-                        type: 'logarithmic',
+                        // type: 'logarithmic',
+                        type: 'linear',
                         reverse: true,
                         position: 'top',
                         min: Vocalia.min_x,
                         max: Vocalia.max_x,
                         grid: {
-                            display: false
+                            // display: false
                         },
                         ticks: {
-                            display: true,
+                            // display: true,
                             callback: (value, index, arr) => {
-                                if (index === 0 || index === arr.length - 1) {
-                                    return value;
-                                } else {
-                                    return '';
-                                }
+                                return value;
+                                // if (index === 0 || index === arr.length - 1) {
+                                //     return value;
+                                // } else {
+                                //     return '';
+                                // }
                             },
-                            // maxRotation: 45,
-                            // minRotation: 45
-                        }
+                        },
                     },
                     y: {
                         title: {
@@ -302,22 +358,24 @@ let Vocalia = {
                             text: 'F1',
                         },
                         display: true,
-                        type: 'logarithmic',
+                        // type: 'logarithmic',
+                        type: 'linear',
                         reverse: true,
                         position: 'right',
                         min: Vocalia.min_y,
                         max: Vocalia.max_y,
                         grid: {
-                            display: false
+                            // display: false
                         },
                         ticks: {
-                            display: true,
+                            // display: true,
                             callback: (value, index, arr) => {
-                                if (index === 0 || index === arr.length - 1) {
-                                    return value;
-                                } else {
-                                    return '';
-                                }
+                                return value;
+                                // if (index === 0 || index === arr.length - 1) {
+                                //     return value;
+                                // } else {
+                                //     return '';
+                                // }
                             },
                         }
                     }
